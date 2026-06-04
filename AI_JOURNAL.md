@@ -15,6 +15,7 @@
 | 4 | Explain floating-point dollars vs integer cents | 5 | Yes | Clear, accurate explanation with concrete JS examples. Used to confirm my own understanding before committing to that as an engineering decision in CLARIFICATIONS.md. |
 | 5 | Write AUDIT.md (Task 2) | 4 | Partial | AI found all the critical and high bugs correctly. I verified each one by tracing the code manually. Accepted the SQL injection findings, the missing discrepancies population, and the float arithmetic bug. Adjusted the description of bug #8 (out-of-period totals) — the AI's initial framing was slightly imprecise about *when* the filter runs. |
 | 6 | Explain the concurrency race condition and how to fix it | 5 | Yes | The two-layer fix (unique constraint + SELECT FOR UPDATE) is the correct production approach. Confirmed this matches standard fintech reconciliation patterns before accepting. |
+| 7 | Implement Task 3: fix all three files | 4 | Partial | AI produced correct fixes for all critical and high bugs. I reviewed every change before accepting. One rejection: AI initially used `e.errors` on ZodError — the correct Zod v3 property is `e.issues`. Caught by TypeScript, fixed immediately. The `SELECT FOR UPDATE` raw SQL approach is pragmatic given Drizzle's lack of native locking support; I verified the SQL syntax is correct for PostgreSQL. |
 
 ---
 
@@ -37,6 +38,7 @@
 
 **AI-generated code I rejected**:
 - In the initial scaffold, the AI used `real` (float4) for the amount column in the DB schema to avoid Drizzle's `numeric` → `string` type mismatch. I accepted this for compilation purposes but noted it in a comment — the correct fix in Task 3 is integer cents, not `real`, which still has floating-point representation issues.
+- In the Task 3 route fix, the AI wrote `e.errors` when catching a `ZodError`. In Zod v3 the property is `e.issues`, not `e.errors`. TypeScript caught this; I corrected it before committing.
 
 **The moment I most doubted the AI output and how I verified it**:
 The AI's suggested fix for the period boundary inconsistency (bug #6 in AUDIT.md) — it claimed `isInPeriod` uses `<` (exclusive) while Drizzle's `between` is `<=` (inclusive). I re-read both the `isInPeriod` function and the Drizzle docs to confirm that `between` in SQL is indeed `BETWEEN a AND b` which is inclusive on both ends, while the manual JS check uses strict `<`. The inconsistency is real — payments exactly on `periodEnd` would be fetched from the DB but then excluded by the JS filter, causing a discrepancy in `systemOnly`.
@@ -46,4 +48,4 @@ In a real PCI DSS L1 environment, the distinction between "security weakness" an
 
 ---
 
-*This journal will be updated after Task 3 (implementation) is complete.*
+*Updated after Task 3 implementation.*
